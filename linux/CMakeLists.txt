@@ -7,7 +7,7 @@ project(runner LANGUAGES CXX)
 set(BINARY_NAME "openlist")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "com.github.openlist.openlist")
+set(APPLICATION_ID "com.github.openlistapp.openlist")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
@@ -47,7 +47,7 @@ function(APPLY_STANDARD_SETTINGS TARGET)
 endfunction()
 
 # Flutter library and tool build rules.
-set(FLUTTER_MANAGED_DIR "flutter")
+set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
 add_subdirectory(${FLUTTER_MANAGED_DIR})
 
 # System-level dependencies.
