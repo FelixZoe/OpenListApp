@@ -8,8 +8,7 @@ on:
     paths:
       - 'ios-native/**'
       - '.github/workflows/ios-native-ipa.yml'
-    paths-ignore:
-      - '**.md'
+      - '!**.md'
 
 jobs:
   build-unsigned-ipa:
