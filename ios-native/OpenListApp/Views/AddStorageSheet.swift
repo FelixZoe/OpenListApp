@@ -10,7 +10,7 @@ struct AddStorageSheet: View {
     @State private var selectedDriver = ""
     @State private var loadingDrivers = false
     @State private var saving = false
-    @State private var toast: ToastMessage?
+    @State private var errorText: String?
     @State private var commonValues: [String: String] = [:]
     @State private var commonBools: [String: Bool] = [:]
     @State private var additionalValues: [String: String] = [:]
@@ -51,7 +51,7 @@ struct AddStorageSheet: View {
                 }
             }
             .task { await loadDrivers() }
-            .glassToast($toast)
+            .errorAlert($errorText)
         }
         .presentationDetents([.large])
     }
@@ -134,7 +134,7 @@ struct AddStorageSheet: View {
         do {
             drivers = try await api.driverList()
         } catch {
-            toast = ToastMessage(message: error.localizedDescription, isError: true)
+            errorText = error.localizedDescription
         }
     }
 
@@ -172,7 +172,7 @@ struct AddStorageSheet: View {
             dismiss()
             await onSaved()
         } catch {
-            toast = ToastMessage(message: error.localizedDescription, isError: true)
+            errorText = error.localizedDescription
         }
     }
 }

@@ -16,7 +16,7 @@ struct FilesBrowserView: View {
 
     @State private var entries: [FileEntry] = []
     @State private var loading = false
-    @State private var toast: ToastMessage?
+    @State private var errorText: String?
     @State private var viewerFile: FileEntry?
     @State private var playerFile: RemoteFile?
     @State private var pendingDelete: FileEntry?
@@ -82,7 +82,7 @@ struct FilesBrowserView: View {
             UnknownFileSheet(path: joinPath(file.name), api: api)
                 .presentationDetents([.medium])
         }
-        .glassToast($toast)
+        .errorAlert($errorText)
     }
 
     private var title: String {
@@ -154,18 +154,16 @@ struct FilesBrowserView: View {
     private func thumbnail(_ entry: FileEntry) -> some View {
         if entry.isDirectory {
             Image(systemName: "folder.fill")
-                .font(.title2)
+                .font(.title3)
                 .foregroundStyle(.blue)
-                .frame(width: 52, height: 52)
-                .background(.blue.opacity(0.12), in: .rect(cornerRadius: 12))
+                .frame(width: 44)
         } else if Self.imageExts.contains(entry.fileExtension) {
             RemoteImageView(path: joinPath(entry.name), api: api)
         } else {
             Image(systemName: iconName(entry))
-                .font(.title2)
+                .font(.title3)
                 .foregroundStyle(iconColor(entry))
-                .frame(width: 52, height: 52)
-                .background(iconColor(entry).opacity(0.12), in: .rect(cornerRadius: 12))
+                .frame(width: 44)
         }
     }
 
@@ -194,7 +192,7 @@ struct FilesBrowserView: View {
         do {
             entries = try await api.listFiles(path: path)
         } catch {
-            toast = ToastMessage(message: error.localizedDescription, isError: true)
+            errorText = error.localizedDescription
         }
     }
 
@@ -203,7 +201,7 @@ struct FilesBrowserView: View {
             try await api.removeFiles(dir: path, names: [file.name])
             await load()
         } catch {
-            toast = ToastMessage(message: error.localizedDescription, isError: true)
+            errorText = error.localizedDescription
         }
     }
 
@@ -215,7 +213,7 @@ struct FilesBrowserView: View {
             viewerFile = entry
         } else if Self.videoExts.contains(ext) || Self.audioExts.contains(ext) {
             guard let url = await api.downloadURL(path: joinPath(entry.name)) else {
-                toast = ToastMessage(message: "无法获取文件链接", isError: true)
+                errorText = "无法获取文件链接"
                 return
             }
             playerFile = RemoteFile(url: url)
@@ -225,13 +223,13 @@ struct FilesBrowserView: View {
     }
     private func shareOrOpen(_ entry: FileEntry) async {
         guard let url = await api.downloadURL(path: joinPath(entry.name)) else {
-            toast = ToastMessage(message: "无法获取文件链接", isError: true)
+            errorText = "无法获取文件链接"
             return
         }
         await MainActor.run {
             UIPasteboard.general.string = url.absoluteString
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
-        toast = ToastMessage(message: "直链已复制到剪贴板", isError: false)
     }
 }
 
@@ -296,7 +294,7 @@ struct RemoteImageView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(width: 52, height: 52)
+        .frame(width: 44)
         .clipShape(.rect(cornerRadius: 12))
         .task { await load() }
     }

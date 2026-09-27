@@ -6,7 +6,7 @@ struct TasksView: View {
     @State private var segment = 0
     @State private var tasks: [TaskItem] = []
     @State private var loading = false
-    @State private var toast: ToastMessage?
+    @State private var errorText: String?
 
     private var api: APIClient {
         APIClient(baseURL: app.baseURL, token: app.token)
@@ -37,7 +37,7 @@ struct TasksView: View {
             }
             .refreshable { await load() }
             .task(id: segment) { await load() }
-            .glassToast($toast)
+            .errorAlert($errorText)
         }
     }
 
@@ -60,10 +60,7 @@ struct TasksView: View {
                                 .lineLimit(2)
                             Spacer()
                             Text(task.displayState)
-                                .font(.caption2.weight(.semibold))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(stateColor(task).opacity(0.16), in: .capsule)
+                                .font(.caption.weight(.medium))
                                 .foregroundStyle(stateColor(task))
                         }
                         ProgressView(value: task.progressFraction)
@@ -97,7 +94,7 @@ struct TasksView: View {
         do {
             tasks = try await api.tasks(undone: segment == 0)
         } catch {
-            toast = ToastMessage(message: error.localizedDescription, isError: true)
+            errorText = error.localizedDescription
         }
     }
 }

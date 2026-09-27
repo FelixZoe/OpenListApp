@@ -5,7 +5,7 @@ struct ProfileView: View {
     @Environment(AppState.self) private var app
     @State private var serverVersion: String?
     @State private var showServerSettings = false
-    @State private var toast: ToastMessage?
+    @State private var errorText: String?
 
     private var api: APIClient {
         APIClient(baseURL: app.baseURL, token: app.token)
@@ -15,34 +15,14 @@ struct ProfileView: View {
         NavigationStack {
             List {
                 Section {
-                    HStack(spacing: 14) {
-                        Text(initialLetter)
-                            .font(.title.bold())
-                            .foregroundStyle(.white)
-                            .frame(width: 58, height: 58)
-                            .background(
-                                LinearGradient(colors: [.blue, .blue.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                                in: .rect(cornerRadius: 18)
-                            )
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(app.hasToken ? (app.username.isEmpty ? "已登录" : app.username) : "访客模式")
-                                .font(.title3.bold())
-                            Text(app.baseURL)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                Section {
+                    LabeledContent("用户", value: app.hasToken ? (app.username.isEmpty ? "已登录" : app.username) : "访客模式")
+                    LabeledContent("服务器", value: app.baseURL)
+                    LabeledContent("版本", value: serverVersion ?? "…")
                     Button {
                         showServerSettings = true
                     } label: {
                         Label("服务器设置", systemImage: "network")
                     }
-                    row("服务器版本", value: serverVersion ?? "…")
                 } header: {
                     Text("服务器")
                 }
@@ -65,21 +45,7 @@ struct ProfileView: View {
             .sheet(isPresented: $showServerSettings) {
                 ServerSettingsSheet()
             }
-            .glassToast($toast)
-        }
-    }
-
-    private var initialLetter: String {
-        let first = app.username.prefix(1).uppercased()
-        return first.isEmpty ? "O" : first
-    }
-
-    private func row(_ title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-            Spacer()
-            Text(value)
-                .foregroundStyle(.secondary)
+            .errorAlert($errorText)
         }
     }
 }

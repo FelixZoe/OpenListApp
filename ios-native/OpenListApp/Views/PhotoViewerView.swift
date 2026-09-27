@@ -9,7 +9,7 @@ struct PhotoViewerView: View {
     @State private var remoteURL: URL?
     @State private var scale: CGFloat = 1
     @State private var lastScale: CGFloat = 1
-    @State private var toast: ToastMessage?
+    @State private var errorText: String?
 
     private var entryPath: String {
         entry.fullPath ?? entry.name
@@ -79,7 +79,7 @@ struct PhotoViewerView: View {
                 Spacer()
             }
         }
-        .glassToast($toast)
+        .errorAlert($errorText)
         .task {
             remoteURL = await loadRemoteURL()
         }
@@ -102,7 +102,7 @@ struct PhotoViewerView: View {
             try await api.removeFiles(dir: dir.isEmpty ? "/" : dir, names: [name])
             dismiss()
         } catch {
-            toast = ToastMessage(message: error.localizedDescription, isError: true)
+            errorText = error.localizedDescription
         }
     }
 }

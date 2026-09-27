@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// 存储空间列表:管理所有挂载的驱动。
+/// 存储空间列表:系统 List/滑动操作,玻璃由系统渲染。
 struct StoragesView: View {
     @Environment(AppState.self) private var app
     @State private var storages: [Storage] = []
     @State private var loading = false
     @State private var showAdd = false
-    @State private var toast: ToastMessage?
+    @State private var errorText: String?
     @State private var pendingDelete: Storage?
 
     private var api: APIClient {
@@ -60,7 +60,7 @@ struct StoragesView: View {
                 }
                 Button("取消", role: .cancel) {}
             }
-            .glassToast($toast)
+            .errorAlert($errorText)
         }
     }
 
@@ -88,11 +88,10 @@ struct StoragesView: View {
 
     private func row(_ storage: Storage) -> some View {
         HStack(spacing: 12) {
-            Text(String(storage.driverName.prefix(1)).uppercased())
-                .font(.title3.bold())
+            Image(systemName: "internaldrive")
+                .font(.title3)
                 .foregroundStyle(.tint)
-                .frame(width: 44, height: 44)
-                .background(.tint.opacity(0.14), in: .rect(cornerRadius: 12))
+                .frame(width: 36)
             VStack(alignment: .leading, spacing: 3) {
                 Text(storage.mountPath)
                     .font(.headline)
@@ -102,24 +101,21 @@ struct StoragesView: View {
                     .lineLimit(1)
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 5) {
+            VStack(alignment: .trailing, spacing: 3) {
                 Text(storage.driverName)
-                    .font(.caption2.weight(.semibold))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(.tint.opacity(0.9), in: .capsule)
-                    .foregroundStyle(.white)
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(statusColor(storage))
-                        .frame(width: 6, height: 6)
-                    Text(storage.isWorking ? "工作" : (storage.isDisabled ? "停用" : (storage.status ?? "未知")))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(statusText(storage))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(statusColor(storage))
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private func statusText(_ storage: Storage) -> String {
+        if storage.isDisabled { return "停用" }
+        return storage.isWorking ? "工作" : (storage.status ?? "未知")
     }
 
     private func statusColor(_ storage: Storage) -> Color {
@@ -133,7 +129,7 @@ struct StoragesView: View {
         do {
             storages = try await api.storages()
         } catch {
-            toast = ToastMessage(message: error.localizedDescription, isError: true)
+            errorText = error.localizedDescription
         }
     }
 
@@ -142,7 +138,7 @@ struct StoragesView: View {
             try await api.setStorageEnabled(storage.isDisabled, id: storage.id)
             await load()
         } catch {
-            toast = ToastMessage(message: error.localizedDescription, isError: true)
+            errorText = error.localizedDescription
         }
     }
 
@@ -151,7 +147,7 @@ struct StoragesView: View {
             try await api.deleteStorage(id: storage.id)
             await load()
         } catch {
-            toast = ToastMessage(message: error.localizedDescription, isError: true)
+            errorText = error.localizedDescription
         }
     }
 }
