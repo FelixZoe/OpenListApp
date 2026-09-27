@@ -6,6 +6,8 @@ import Observation
 @Observable
 @MainActor
 final class AppState {
+    static let shared = AppState()
+
     private static let defaults = UserDefaults.standard
 
     var baseURL: String {

@@ -208,6 +208,7 @@ struct FilesBrowserView: View {
     }
 
     private func open(_ entry: FileEntry) async {
+        var entry = entry
         let ext = entry.fileExtension
         entry.fullPath = joinPath(entry.name)
         if Self.imageExts.contains(ext) {

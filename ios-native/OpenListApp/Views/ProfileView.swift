@@ -57,7 +57,7 @@ struct ProfileView: View {
             .navigationTitle("我的")
             .task {
                 if let settings = try? await api.publicSettings() {
-                    serverVersion = settings?.version
+                    serverVersion = settings.version
                 }
             }
             .glassToast($toast)

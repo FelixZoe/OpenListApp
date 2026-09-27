@@ -88,7 +88,7 @@ struct PhotoViewerView: View {
     private func loadRemoteURL() async -> URL? {
         // 优先 raw_url(带签名,公共可访问);失败回退 /d 直链。
         if let data = try? await api.fileGet(path: entryPath),
-           let raw = data?.raw_url,
+           let raw = data.raw_url,
            let url = URL(string: raw) {
             return url
         }

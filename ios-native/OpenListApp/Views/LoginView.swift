@@ -138,7 +138,7 @@ struct LoginView: View {
             let token = try await api.login(username: username, password: password)
             var name = username
             if let me = try? await APIClient(baseURL: base, token: token).me() {
-                name = me?.username ?? username
+                name = me.username ?? username
             }
             app.signIn(baseURL: base, token: token, username: name)
         } catch {
