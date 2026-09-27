@@ -5,7 +5,6 @@ struct ProfileView: View {
     @Environment(AppState.self) private var app
     @State private var serverVersion: String?
     @State private var showServerSettings = false
-    @State private var errorText: String?
 
     private var api: APIClient {
         APIClient(baseURL: app.baseURL, token: app.token)
@@ -45,7 +44,6 @@ struct ProfileView: View {
             .sheet(isPresented: $showServerSettings) {
                 ServerSettingsSheet()
             }
-            .errorAlert($errorText)
         }
     }
 }

@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// 任务页:未完成 / 已完成,玻璃分段控件切换。
+/// 任务页:未登录显示空态不请求;连接失败显示页内错误态 + 重试。
 struct TasksView: View {
     @Environment(AppState.self) private var app
     @State private var segment = 0
     @State private var tasks: [TaskItem] = []
     @State private var loading = false
-    @State private var errorText: String?
+    @State private var loadError: String?
 
     private var api: APIClient {
         APIClient(baseURL: app.baseURL, token: app.token)
@@ -37,46 +37,79 @@ struct TasksView: View {
             }
             .refreshable { await load() }
             .task(id: segment) { await load() }
-            .errorAlert($errorText)
         }
     }
 
     @ViewBuilder
     private var content: some View {
-        if loading && tasks.isEmpty {
+        if !app.hasToken {
+            loginRequired
+        } else if loading && tasks.isEmpty {
             ProgressView()
+        } else if let loadError, tasks.isEmpty {
+            unavailable(message: loadError)
         } else if tasks.isEmpty {
             ContentUnavailableView(
                 segment == 0 ? "没有未完成任务" : "没有已完成任务",
                 systemImage: "checkmark.circle"
             )
         } else {
-            List {
-                ForEach(tasks) { task in
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text(task.displayName)
-                                .font(.subheadline.weight(.medium))
-                                .lineLimit(2)
-                            Spacer()
-                            Text(task.displayState)
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(stateColor(task))
-                        }
-                        ProgressView(value: task.progressFraction)
-                            .tint(stateColor(task))
-                        HStack {
-                            Spacer()
-                            Text("\(Int(task.progressFraction * 100))%")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-            }
-            .listStyle(.insetGrouped)
+            taskList
         }
+    }
+
+    private var loginRequired: some View {
+        ContentUnavailableView {
+            Label("请先登录", systemImage: "person.crop.circle.badge.exclamationmark")
+        } description: {
+            Text("任务管理需要登录服务器账号")
+        } actions: {
+            Button("去登录") {
+                app.signOut()
+            }
+            .buttonStyle(.glassProminent)
+        }
+    }
+
+    private func unavailable(message: String) -> some View {
+        ContentUnavailableView {
+            Label("无法连接服务器", systemImage: "wifi.exclamationmark")
+        } description: {
+            Text(message)
+        } actions: {
+            Button("重试") {
+                Task { await load() }
+            }
+            .buttonStyle(.glassProminent)
+        }
+    }
+
+    private var taskList: some View {
+        List {
+            ForEach(tasks) { task in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(task.displayName)
+                            .font(.subheadline.weight(.medium))
+                            .lineLimit(2)
+                        Spacer()
+                        Text(task.displayState)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(stateColor(task))
+                    }
+                    ProgressView(value: task.progressFraction)
+                        .tint(stateColor(task))
+                    HStack {
+                        Spacer()
+                        Text("\(Int(task.progressFraction * 100))%")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .listStyle(.insetGrouped)
     }
 
     private func stateColor(_ task: TaskItem) -> Color {
@@ -89,12 +122,14 @@ struct TasksView: View {
     }
 
     private func load() async {
+        guard app.hasToken else { return }
         loading = true
         defer { loading = false }
         do {
             tasks = try await api.tasks(undone: segment == 0)
+            loadError = nil
         } catch {
-            errorText = error.localizedDescription
+            loadError = error.localizedDescription
         }
     }
 }

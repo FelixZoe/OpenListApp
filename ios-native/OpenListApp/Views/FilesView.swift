@@ -16,6 +16,7 @@ struct FilesBrowserView: View {
 
     @State private var entries: [FileEntry] = []
     @State private var loading = false
+    @State private var loadError: String?
     @State private var errorText: String?
     @State private var viewerFile: FileEntry?
     @State private var playerFile: RemoteFile?
@@ -34,6 +35,8 @@ struct FilesBrowserView: View {
         Group {
             if loading && entries.isEmpty {
                 ProgressView()
+            } else if let loadError, entries.isEmpty {
+                unavailable(message: loadError)
             } else if entries.isEmpty {
                 ContentUnavailableView("空文件夹", systemImage: "folder")
             } else {
@@ -186,13 +189,27 @@ struct FilesBrowserView: View {
         return path + "/" + name
     }
 
+    private func unavailable(message: String) -> some View {
+        ContentUnavailableView {
+            Label("无法连接服务器", systemImage: "wifi.exclamationmark")
+        } description: {
+            Text(message)
+        } actions: {
+            Button("重试") {
+                Task { await load() }
+            }
+            .buttonStyle(.glassProminent)
+        }
+    }
+
     private func load() async {
         loading = true
         defer { loading = false }
         do {
             entries = try await api.listFiles(path: path)
+            loadError = nil
         } catch {
-            errorText = error.localizedDescription
+            loadError = error.localizedDescription
         }
     }
 

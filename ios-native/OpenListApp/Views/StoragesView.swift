@@ -1,10 +1,12 @@
 import SwiftUI
 
 /// 存储空间列表:系统 List/滑动操作,玻璃由系统渲染。
+/// 未登录时显示空态,不发起请求;连接失败显示页内错误态而非弹窗。
 struct StoragesView: View {
     @Environment(AppState.self) private var app
     @State private var storages: [Storage] = []
     @State private var loading = false
+    @State private var loadError: String?
     @State private var showAdd = false
     @State private var errorText: String?
     @State private var pendingDelete: Storage?
@@ -16,8 +18,12 @@ struct StoragesView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if loading && storages.isEmpty {
+                if !app.hasToken {
+                    loginRequired
+                } else if loading && storages.isEmpty {
                     ProgressView()
+                } else if let loadError, storages.isEmpty {
+                    unavailable("无法连接服务器", systemImage: "wifi.exclamationmark", message: loadError)
                 } else if storages.isEmpty {
                     ContentUnavailableView(
                         "还没有存储空间",
@@ -61,6 +67,32 @@ struct StoragesView: View {
                 Button("取消", role: .cancel) {}
             }
             .errorAlert($errorText)
+        }
+    }
+
+    private var loginRequired: some View {
+        ContentUnavailableView {
+            Label("请先登录", systemImage: "person.crop.circle.badge.exclamationmark")
+        } description: {
+            Text("存储管理需要登录服务器账号")
+        } actions: {
+            Button("去登录") {
+                app.signOut()
+            }
+            .buttonStyle(.glassProminent)
+        }
+    }
+
+    private func unavailable(_ title: String, systemImage: String, message: String) -> some View {
+        ContentUnavailableView {
+            Label(title, systemImage: systemImage)
+        } description: {
+            Text(message)
+        } actions: {
+            Button("重试") {
+                Task { await load() }
+            }
+            .buttonStyle(.glassProminent)
         }
     }
 
@@ -124,12 +156,14 @@ struct StoragesView: View {
     }
 
     private func load() async {
+        guard app.hasToken else { return }
         loading = true
         defer { loading = false }
         do {
             storages = try await api.storages()
+            loadError = nil
         } catch {
-            errorText = error.localizedDescription
+            loadError = error.localizedDescription
         }
     }
 
