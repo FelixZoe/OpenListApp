@@ -22,9 +22,16 @@ final class AppState {
         didSet { Self.defaults.set(username, forKey: "openlist.username") }
     }
 
+    /// 是否已进入主界面。
+    /// token 为 nil = 未进入;空字符串 = 访客模式(跳过登录);非空 = 已登录。
     var isSignedIn: Bool {
-        let token = token ?? ""
-        return !token.isEmpty
+        token != nil
+    }
+
+    /// 是否持有有效登录令牌。
+    var hasToken: Bool {
+        let value = token ?? ""
+        return !value.isEmpty
     }
 
     init() {

@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// 我的:用户信息 + 常用入口 + 退出登录。
+/// 我的:用户信息 + 原生服务器设置 + 登录/退出。
 struct ProfileView: View {
     @Environment(AppState.self) private var app
     @State private var serverVersion: String?
+    @State private var showServerSettings = false
     @State private var toast: ToastMessage?
 
     private var api: APIClient {
@@ -15,8 +16,7 @@ struct ProfileView: View {
             List {
                 Section {
                     HStack(spacing: 14) {
-                        Text(String(app.username.prefix(1)).uppercased().isEmpty
-                             ? "O" : String(app.username.prefix(1)).uppercased())
+                        Text(initialLetter)
                             .font(.title.bold())
                             .foregroundStyle(.white)
                             .frame(width: 58, height: 58)
@@ -25,7 +25,7 @@ struct ProfileView: View {
                                 in: .rect(cornerRadius: 18)
                             )
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(app.username.isEmpty ? "未登录" : app.username)
+                            Text(app.hasToken ? (app.username.isEmpty ? "已登录" : app.username) : "访客模式")
                                 .font(.title3.bold())
                             Text(app.baseURL)
                                 .font(.caption)
@@ -37,8 +37,10 @@ struct ProfileView: View {
                 }
 
                 Section {
-                    Link(destination: URL(string: app.baseURL) ?? URL(string: "https://github.com/OpenListTeam")!) {
-                        Label("在浏览器中打开", systemImage: "safari")
+                    Button {
+                        showServerSettings = true
+                    } label: {
+                        Label("服务器设置", systemImage: "network")
                     }
                     row("服务器版本", value: serverVersion ?? "…")
                 } header: {
@@ -46,10 +48,10 @@ struct ProfileView: View {
                 }
 
                 Section {
-                    Button(role: .destructive) {
+                    Button(role: app.hasToken ? .destructive : nil) {
                         app.signOut()
                     } label: {
-                        Label("退出登录", systemImage: "rectangle.portrait.and.arrow.right")
+                        Label(app.hasToken ? "退出登录" : "去登录", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
             }
@@ -60,8 +62,16 @@ struct ProfileView: View {
                     serverVersion = settings.version
                 }
             }
+            .sheet(isPresented: $showServerSettings) {
+                ServerSettingsSheet()
+            }
             .glassToast($toast)
         }
+    }
+
+    private var initialLetter: String {
+        let first = app.username.prefix(1).uppercased()
+        return first.isEmpty ? "O" : first
     }
 
     private func row(_ title: String, value: String) -> some View {
@@ -71,5 +81,45 @@ struct ProfileView: View {
             Text(value)
                 .foregroundStyle(.secondary)
         }
+    }
+}
+
+/// 原生服务器设置:修改目标服务器地址。
+struct ServerSettingsSheet: View {
+    @Environment(AppState.self) private var app
+    @Environment(\.dismiss) private var dismiss
+    @State private var url = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("http://127.0.0.1:5244", text: $url)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } footer: {
+                    Text("修改后立即生效,客户端会连接新的服务器。")
+                }
+            }
+            .navigationTitle("服务器设置")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        let normalized = APIClient.normalizedBaseURL(url)
+                        if !normalized.isEmpty {
+                            app.baseURL = normalized
+                        }
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear { url = app.baseURL }
+        }
+        .presentationDetents([.medium])
     }
 }
